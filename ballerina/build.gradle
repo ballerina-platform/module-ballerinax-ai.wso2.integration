@@ -18,11 +18,11 @@
 
 import org.apache.tools.ant.taskdefs.condition.Os
 
-plugins {
+plugins{
     id 'io.ballerina.plugin'
 }
 
-description = 'Ai.wso2.integration - Ballerina'
+description = 'ai.wso2.integration - Ballerina'
 
 def packageName = "ai.wso2.integration"
 def packageOrg = "ballerinax"
@@ -96,5 +96,6 @@ clean {
 }
 
 build.dependsOn "generatePomFileForMavenPublication"
+
 publishToMavenLocal.dependsOn build
 publish.dependsOn build

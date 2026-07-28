@@ -13,3 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
+# Defines the common error type for the module.
+public type Error distinct error;

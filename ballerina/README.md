@@ -1,17 +1,19 @@
 ## Overview
 
-[//]: # (TODO: Add overview mentioning the purpose of the module, supported REST API versions, and other high-level details.)
+The `ai.wso2.integration` module provides a Ballerina `ai:KnowledgeBase` implementation for retrieving relevant content from a WSO2 Integration knowledge base.
 
-## Setup guide
+### Quickstart
 
-[//]: # (TODO: Add detailed steps to obtain credentials and configure the module.)
+```ballerina
+import ballerina/ai;
+import ballerinax/ai.wso2.integration;
 
-## Quickstart
+integration:CloudKnowledgeBase knowledgeBase = check new (
+    serviceUrl,
+    {auth: {token: accessToken}}
+);
 
-[//]: # (TODO: Add a quickstart guide to demonstrate a basic functionality of the module, including sample code snippets.)
+ai:QueryMatch[] matches = check knowledgeBase.retrieve("How do I configure the integration?");
+```
 
-## Examples
-
-The `Ai.wso2.integration` connector provides practical examples illustrating usage in various scenarios. Explore these [examples](https://github.com/module-ballerinax-ai.wso2.integration/tree/main/examples/), covering the following use cases:
-
-[//]: # (TODO: Add examples)
+The implementation supports retrieval. Ingestion and deletion are not currently supported.
