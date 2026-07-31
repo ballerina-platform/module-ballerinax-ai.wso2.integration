@@ -29,6 +29,17 @@ const TEXT = "text";
 const SOURCE = "source";
 const TIMESTAMP = "timestamp";
 
+type KnowledgeBaseIngestRequest record {|
+    IngestChunkRequest[] documents;
+|};
+
+type IngestChunkRequest record {|
+    string text;
+    string 'source;
+    string timestamp?;
+    map<json> metadata;
+|};
+
 type KnowledgeBaseRetrieveRequest record {|
     string user_query;
     int max_retrieve_chunks?;
