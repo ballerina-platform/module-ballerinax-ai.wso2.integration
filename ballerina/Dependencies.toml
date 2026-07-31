@@ -86,7 +86,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "data.jsondata"
-version = "1.1.3"
+version = "1.1.4"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"},
 	{org = "ballerina", name = "lang.object"}
@@ -400,9 +400,9 @@ dependencies = [
 ]
 
 [[package]]
-org = "ballerinax"
+org = "sumudunissanka"
 name = "ai.wso2.integration"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
 	{org = "ballerina", name = "ai"},
 	{org = "ballerina", name = "http"},
@@ -410,6 +410,6 @@ dependencies = [
 	{org = "ballerina", name = "test"}
 ]
 modules = [
-	{org = "ballerinax", packageName = "ai.wso2.integration", moduleName = "ai.wso2.integration"}
+	{org = "sumudunissanka", packageName = "ai.wso2.integration", moduleName = "ai.wso2.integration"}
 ]
 
