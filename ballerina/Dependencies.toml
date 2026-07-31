@@ -279,7 +279,7 @@ version = "1.2.0"
 [[package]]
 org = "ballerina"
 name = "mcp"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "jballerina.java"},
@@ -367,6 +367,9 @@ version = "2.8.1"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"}
 ]
+modules = [
+	{org = "ballerina", packageName = "time", moduleName = "time"}
+]
 
 [[package]]
 org = "ballerina"
@@ -400,16 +403,17 @@ dependencies = [
 ]
 
 [[package]]
-org = "sumudunissanka"
+org = "ballerinax"
 name = "ai.wso2.integration"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
 	{org = "ballerina", name = "ai"},
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "io"},
-	{org = "ballerina", name = "test"}
+	{org = "ballerina", name = "test"},
+	{org = "ballerina", name = "time"}
 ]
 modules = [
-	{org = "sumudunissanka", packageName = "ai.wso2.integration", moduleName = "ai.wso2.integration"}
+	{org = "ballerinax", packageName = "ai.wso2.integration", moduleName = "ai.wso2.integration"}
 ]
 
