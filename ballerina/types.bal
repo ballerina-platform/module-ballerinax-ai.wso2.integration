@@ -14,6 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/data.jsondata;
+
 // Constants used for knowledge base retrieval.
 const APPLICATION_JSON = "application/json";
 const MATCHES = "matches";
@@ -30,11 +32,17 @@ const SOURCE = "source";
 const TIMESTAMP = "timestamp";
 
 type KnowledgeBaseRetrieveRequest record {|
-    string user_query;
-    int max_retrieve_chunks?;
-    decimal min_similarity_threshold?;
-    string cohere_reranker_apikey?;
-    string cohere_reranker_model?;
-    int reranker_top_n?;
+    @jsondata:Name {value: "user_query"}
+    string userQuery;
+    @jsondata:Name {value: "max_retrieve_chunks"}
+    int maxRetrieveChunks?;
+    @jsondata:Name {value: "min_similarity_threshold"}
+    decimal minSimilarityThreshold?;
+    @jsondata:Name {value: "cohere_reranker_apikey"}
+    string cohereRerankerApiKey?;
+    @jsondata:Name {value: "cohere_reranker_model"}
+    string cohereRerankerModel?;
+    @jsondata:Name {value: "reranker_top_n"}
+    int rerankerTopN?;
     json filters?;
 |};

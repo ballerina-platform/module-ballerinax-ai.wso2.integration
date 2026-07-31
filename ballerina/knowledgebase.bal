@@ -15,13 +15,14 @@
 // under the License.
 
 import ballerina/ai;
+import ballerina/data.jsondata;
 import ballerina/http;
 
 # Configuration for connecting to a WSO2 Cloud knowledge base.
 #
 # + auth - Authentication configuration: either bearer token or OAuth2 client credentials
 # + timeout - The HTTP client timeout in seconds (optional)
-public type ConnectKnowledgeBase record {|
+public type KnowledgeBaseAuthConfig record {|
     http:BearerTokenConfig|http:OAuth2ClientCredentialsGrantConfig auth;
     decimal timeout?;
 |};
@@ -39,8 +40,7 @@ public isolated class CloudKnowledgeBase {
 
     # Initializes a new `KnowledgeBase` instance.
     #
-    # + knowledgeBaseConfig - Either `CreateKnowledgeBase` to provision a new knowledge base,
-    # or `ConnectKnowledgeBase` to connect to an existing one
+    # + knowledgeBaseAuthConfig - Authentication configuration for connecting to the knowledge base
     # + connectionConfig - Additional HTTP connection configurations
     # + minSimilarityThreshold - The minimum similarity score threshold for retrieved chunks (default: 0.0)
     # + cohereRerankerApiKey - The API key for the Cohere reranker service; omit to disable reranking
@@ -49,7 +49,7 @@ public isolated class CloudKnowledgeBase {
     # + return - `nil` on success, or an `ai:Error` if the initialization fails
     public isolated function init(
             @display {label: "Service URL"} string serviceUrl,
-            @display {label: "Knowledge Base Configuration"} ConnectKnowledgeBase knowledgeBaseAuthConfig,
+            @display {label: "Knowledge Base Authentication Configuration"} KnowledgeBaseAuthConfig knowledgeBaseAuthConfig,
             @display {label: "Minimum Similarity Threshold"} decimal minSimilarityThreshold = 0.7,
             @display {label: "Cohere Reranker API Key"} string? cohereRerankerApiKey = (),
             @display {label: "Cohere Reranker Model"} string? cohereRerankerModel = (),
@@ -110,17 +110,17 @@ public isolated class CloudKnowledgeBase {
         }
 
         KnowledgeBaseRetrieveRequest retrieveRequest = {
-            user_query: query,
-            max_retrieve_chunks: maxLimit == -1 ? () : maxLimit,
-            min_similarity_threshold: self.minSimilarityThreshold,
-            cohere_reranker_apikey: self.cohereRerankerApiKey,
-            cohere_reranker_model: self.cohereRerankerModel,
-            reranker_top_n: self.rerankerTopN,
+            userQuery: query,
+            maxRetrieveChunks: maxLimit == -1 ? () : maxLimit,
+            minSimilarityThreshold: self.minSimilarityThreshold,
+            cohereRerankerApiKey: self.cohereRerankerApiKey,
+            cohereRerankerModel: self.cohereRerankerModel,
+            rerankerTopN: self.rerankerTopN,
             filters: filters is ai:MetadataFilters ? filters.toJson() : ()
         };
 
         do {
-            json retrievePayload = retrieveRequest;
+            json retrievePayload = jsondata:toJson(retrieveRequest);
             http:Response response = check self.serviceClient->/retrieve.post(
                 retrievePayload, {}, APPLICATION_JSON
             );
