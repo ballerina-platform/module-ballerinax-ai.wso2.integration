@@ -5,12 +5,12 @@
 
 [ballerina]
 dependencies-toml-version = "2"
-distribution-version = "2201.12.0"
+distribution-version = "2201.13.0"
 
 [[package]]
 org = "ballerina"
 name = "ai"
-version = "1.12.0"
+version = "1.13.0"
 dependencies = [
 	{org = "ballerina", name = "cache"},
 	{org = "ballerina", name = "constraint"},
@@ -118,7 +118,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "http"
-version = "2.14.13"
+version = "2.16.6"
 dependencies = [
 	{org = "ballerina", name = "auth"},
 	{org = "ballerina", name = "cache"},
@@ -266,12 +266,15 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "log"
-version = "2.14.0"
+version = "2.17.0"
 dependencies = [
 	{org = "ballerina", name = "io"},
 	{org = "ballerina", name = "jballerina.java"},
 	{org = "ballerina", name = "lang.value"},
 	{org = "ballerina", name = "observe"}
+]
+modules = [
+	{org = "ballerina", packageName = "log", moduleName = "log"}
 ]
 
 [[package]]
@@ -303,7 +306,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "oauth2"
-version = "2.14.1"
+version = "2.15.0"
 dependencies = [
 	{org = "ballerina", name = "cache"},
 	{org = "ballerina", name = "crypto"},
@@ -316,7 +319,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "observe"
-version = "1.6.0"
+version = "1.7.1"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"}
 ]
@@ -389,6 +392,32 @@ dependencies = [
 	{org = "ballerina", name = "lang.int"},
 	{org = "ballerina", name = "time"}
 ]
+modules = [
+	{org = "ballerina", packageName = "uuid", moduleName = "uuid"}
+]
+
+[[package]]
+org = "ballerina"
+name = "websocket"
+version = "2.15.5"
+dependencies = [
+	{org = "ballerina", name = "auth"},
+	{org = "ballerina", name = "constraint"},
+	{org = "ballerina", name = "http"},
+	{org = "ballerina", name = "io"},
+	{org = "ballerina", name = "jballerina.java"},
+	{org = "ballerina", name = "jwt"},
+	{org = "ballerina", name = "lang.array"},
+	{org = "ballerina", name = "lang.runtime"},
+	{org = "ballerina", name = "lang.string"},
+	{org = "ballerina", name = "lang.value"},
+	{org = "ballerina", name = "log"},
+	{org = "ballerina", name = "oauth2"},
+	{org = "ballerina", name = "time"}
+]
+modules = [
+	{org = "ballerina", packageName = "websocket", moduleName = "websocket"}
+]
 
 [[package]]
 org = "ballerina"
@@ -405,13 +434,16 @@ dependencies = [
 [[package]]
 org = "ballerinax"
 name = "ai.wso2.integration"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
 	{org = "ballerina", name = "ai"},
 	{org = "ballerina", name = "data.jsondata"},
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "io"},
-	{org = "ballerina", name = "test"}
+	{org = "ballerina", name = "log"},
+	{org = "ballerina", name = "test"},
+	{org = "ballerina", name = "uuid"},
+	{org = "ballerina", name = "websocket"}
 ]
 modules = [
 	{org = "ballerinax", packageName = "ai.wso2.integration", moduleName = "ai.wso2.integration"}
