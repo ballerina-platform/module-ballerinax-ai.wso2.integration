@@ -58,6 +58,16 @@ task updateTomlFiles {
     }
 }
 
+task pullDistributionBirDependencies(type: Exec) {
+    description = 'Pulls dependencies referenced by BIRs bundled with the Ballerina distribution.'
+    workingDir project.projectDir
+    commandLine 'bal', 'pull', 'ballerina/time:2.7.0'
+}
+
+tasks.named('test') {
+    dependsOn pullDistributionBirDependencies
+}
+
 task commitTomlFiles {
     doLast {
         def gitUserName = System.getenv("BALLERINA_BOT_USERNAME") ?: "ballerina-cicd-bot"
