@@ -16,8 +16,6 @@
  * under the License.
  */
 
-import org.apache.tools.ant.taskdefs.condition.Os
-
 plugins{
     id 'io.ballerina.plugin'
 }
@@ -62,13 +60,12 @@ task updateTomlFiles {
 
 task commitTomlFiles {
     doLast {
+        def gitUserName = System.getenv("BALLERINA_BOT_USERNAME") ?: "ballerina-cicd-bot"
+        def gitUserEmail = System.getenv("BALLERINA_BOT_EMAIL") ?: "ballerinalang+cicd-bot@wso2.com"
         project.exec {
             ignoreExitValue true
-            if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-                commandLine 'cmd', '/c', "git commit -m \"[Automated] Update the toml files\" Ballerina.toml Dependencies.toml"
-            } else {
-                commandLine 'sh', '-c', "git commit -m '[Automated] Update the toml files' Ballerina.toml Dependencies.toml"
-            }
+            commandLine 'git', '-c', "user.name=${gitUserName}", '-c', "user.email=${gitUserEmail}",
+                    'commit', '-m', '[Automated] Update the toml files', '--', 'Ballerina.toml', 'Dependencies.toml'
         }
     }
 }
