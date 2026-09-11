@@ -17,8 +17,38 @@
 import ballerina/ai;
 import ballerina/http;
 import ballerina/test;
+import ballerina/time;
 
 service on new http:Listener(9090) {
+    resource function post ingest(http:Request req) returns http:Response|error {
+        if !req.getContentType().startsWith(APPLICATION_JSON) {
+            return error("Expected an application/json request");
+        }
+        json payload = check req.getJsonPayload();
+        if payload !is map<json> {
+            return error("Expected an object payload");
+        }
+        json? documents = payload["documents"];
+        if documents !is json[] || documents.length() != 2 {
+            return error("Unexpected ingest request payload");
+        }
+        json firstDocument = documents[0];
+        if firstDocument !is map<json> || firstDocument["text"] !=
+                "Permanent employees receive 21 days of annual leave per calendar year."
+                || firstDocument["source"] != "employee-handbook.pdf"
+                || firstDocument["timestamp"] != "2026-07-31T10:00:00Z" {
+            return error("Unexpected normalized ingest chunk");
+        }
+        json? metadata = firstDocument["metadata"];
+        if metadata !is map<json> || metadata["createdAt"] != "2026-07-01T08:30:00Z"
+                || metadata["modifiedAt"] != "2026-07-30T14:15:00Z" {
+            return error("Unexpected normalized ingest metadata");
+        }
+        http:Response response = new;
+        response.statusCode = http:STATUS_NO_CONTENT;
+        return response;
+    }
+
     resource function post retrieve(http:Request req) returns http:Response|error {
         if !req.getContentType().startsWith(APPLICATION_JSON) {
             return error("Expected an application/json request");
@@ -39,6 +69,40 @@ service on new http:Listener(9090) {
         });
         return response;
     }
+}
+
+@test:Config
+isolated function testKnowledgeBaseIngestJsonRequest() returns error? {
+    CloudKnowledgeBase knowledgeBase = check new ("http://localhost:9090",
+        {auth: {token: "test-token"}}
+    );
+    time:Utc createdAt = check time:utcFromString("2026-07-01T08:30:00Z");
+    time:Utc modifiedAt = check time:utcFromString("2026-07-30T14:15:00Z");
+    ai:Chunk[] chunks = [
+        {
+            'type: "text-chunk",
+            content: "Permanent employees receive 21 days of annual leave per calendar year.",
+            metadata: {
+                fileName: "employee-handbook.pdf",
+                createdAt,
+                modifiedAt,
+                index: 0,
+                "source": "employee-handbook.pdf",
+                "timestamp": "2026-07-31T10:00:00Z"
+            }
+        },
+        {
+            'type: "text-chunk",
+            content: "Leave requests must be submitted through the HR portal.",
+            metadata: {
+                fileName: "employee-handbook.pdf",
+                index: 1,
+                "source": "employee-handbook.pdf",
+                "timestamp": "2026-07-31T10:00:00Z"
+            }
+        }
+    ];
+    check knowledgeBase.ingest(chunks);
 }
 
 @test:Config
