@@ -17,6 +17,63 @@
 import ballerina/ai;
 import ballerina/http;
 import ballerina/io;
+import ballerina/time;
+
+isolated function createIngestRequest(ai:Chunk[]|ai:Document[]|ai:Document documents)
+        returns KnowledgeBaseIngestRequest|ai:Error {
+    IngestChunkRequest[] chunks = [];
+    if documents is ai:Document {
+        chunks.push(check createIngestChunk(documents));
+    } else {
+        ai:Document[] documentArray = <ai:Document[]>documents;
+        foreach ai:Document document in documentArray {
+            chunks.push(check createIngestChunk(document));
+        }
+    }
+    return {documents: chunks};
+}
+
+isolated function createIngestChunk(ai:Document document) returns IngestChunkRequest|ai:Error {
+    map<json> metadata = check createIngestMetadata(document.metadata);
+    string? sourceValue = getStringMetadata(metadata, SOURCE);
+    if sourceValue is () {
+        sourceValue = getStringMetadata(metadata, "'source");
+    }
+    ai:Metadata? documentMetadata = document.metadata;
+    if sourceValue is () && documentMetadata is ai:Metadata && documentMetadata.fileName is string {
+        sourceValue = documentMetadata.fileName;
+    }
+    if sourceValue is () {
+        return error("document metadata must contain a string 'source' or 'fileName'");
+    }
+
+    string? timestamp = getStringMetadata(metadata, TIMESTAMP);
+    anydata content = document.content;
+    string text = content is string ? content : content.toString();
+    return {text, 'source: sourceValue, timestamp, metadata};
+}
+
+isolated function createIngestMetadata(ai:Metadata? documentMetadata) returns map<json>|ai:Error {
+    if documentMetadata is () {
+        return {};
+    }
+
+    map<json> convertedMetadata = {...documentMetadata};
+    time:Utc? createdAt = documentMetadata.createdAt;
+    if createdAt is time:Utc {
+        convertedMetadata["createdAt"] = time:utcToString(createdAt);
+    }
+    time:Utc? modifiedAt = documentMetadata.modifiedAt;
+    if modifiedAt is time:Utc {
+        convertedMetadata["modifiedAt"] = time:utcToString(modifiedAt);
+    }
+    return convertedMetadata;
+}
+
+isolated function getStringMetadata(map<json> metadata, string key) returns string? {
+    json? metadataValue = metadata[key];
+    return metadataValue is string ? metadataValue : ();
+}
 
 isolated function readResponsePayloadAsString(http:Response response) returns string|Error {
     do {
@@ -33,16 +90,7 @@ isolated function readResponsePayloadAsString(http:Response response) returns st
 }
 
 isolated function readJsonResponse(http:Response response) returns json|Error {
-    if response.statusCode == http:STATUS_UNAUTHORIZED {
-        return error(string `invalid access token or unauthorized access to the service.`);
-    }
-    if response.statusCode < 200 || response.statusCode >= 300 {
-        string|Error responseBody = readResponsePayloadAsString(response);
-        if responseBody is string && responseBody.trim() != "" {
-            return error(string `request failed with status code ${response.statusCode}: ${responseBody}`);
-        }
-        return error(string `request failed with status code ${response.statusCode}`);
-    }
+    check validateResponse(response);
     string contentType = re `;`.split(response.getContentType())[0].trim();
     if contentType != APPLICATION_JSON {
         return error(string `unexpected content type '${response.getContentType()}', expected 'application/json'.`);
@@ -52,6 +100,19 @@ isolated function readJsonResponse(http:Response response) returns json|Error {
         return check response.getJsonPayload();
     } on fail error e {
         return error("unable to read JSON response", e);
+    }
+}
+
+isolated function validateResponse(http:Response response) returns Error? {
+    if response.statusCode == http:STATUS_UNAUTHORIZED {
+        return error(string `invalid access token or unauthorized access to the service.`);
+    }
+    if response.statusCode < 200 || response.statusCode >= 300 {
+        string|Error responseBody = readResponsePayloadAsString(response);
+        if responseBody is string && responseBody.trim() != "" {
+            return error(string `request failed with status code ${response.statusCode}: ${responseBody}`);
+        }
+        return error(string `request failed with status code ${response.statusCode}`);
     }
 }
 

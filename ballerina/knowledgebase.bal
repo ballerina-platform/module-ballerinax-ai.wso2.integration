@@ -89,12 +89,20 @@ public isolated class CloudKnowledgeBase {
         self.rerankerTopN = rerankerTopN;
     }
 
-    # Ingestion is not supported.
+    # Ingests documents or chunks into the WSO2 Cloud knowledge base.
     #
     # + documents - The documents or chunks to ingest
-    # + return - An `ai:Error` since ingestion is not supported by the retrieve API
+    # + return - `nil` on success, or an `ai:Error` if ingestion fails
     public isolated function ingest(ai:Chunk[]|ai:Document[]|ai:Document documents) returns ai:Error? {
-        return error("ingestion is not supported by the WSO2 Integration knowledge base API");
+        do {
+            KnowledgeBaseIngestRequest ingestRequest = check createIngestRequest(documents);
+            http:Response response = check self.serviceClient->/ingest.post(
+                ingestRequest, {}, APPLICATION_JSON
+            );
+            check validateResponse(response);
+        } on fail error e {
+            return error(string `failed to ingest documents: ${e.message()}`, e);
+        }
     }
 
     # Retrieves relevant chunks for the given query.
