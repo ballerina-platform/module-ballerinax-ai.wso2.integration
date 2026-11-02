@@ -25,7 +25,8 @@ isolated function createIngestRequest(ai:Chunk[]|ai:Document[]|ai:Document docum
     if documents is ai:Document {
         chunks.push(check createIngestChunk(documents));
     } else {
-        ai:Document[] documentArray = <ai:Document[]>documents;
+        // `ai:Chunk` is structurally an `ai:Document`, so this assignment needs no cast.
+        ai:Document[] documentArray = documents;
         foreach ai:Document document in documentArray {
             chunks.push(check createIngestChunk(document));
         }
@@ -34,11 +35,8 @@ isolated function createIngestRequest(ai:Chunk[]|ai:Document[]|ai:Document docum
 }
 
 isolated function createIngestChunk(ai:Document document) returns IngestChunkRequest|ai:Error {
-    map<json> metadata = check createIngestMetadata(document.metadata);
+    map<json> metadata = check toJsonMetadata(document.metadata);
     string? sourceValue = getStringMetadata(metadata, SOURCE);
-    if sourceValue is () {
-        sourceValue = getStringMetadata(metadata, "'source");
-    }
     ai:Metadata? documentMetadata = document.metadata;
     if sourceValue is () && documentMetadata is ai:Metadata && documentMetadata.fileName is string {
         sourceValue = documentMetadata.fileName;
@@ -53,7 +51,7 @@ isolated function createIngestChunk(ai:Document document) returns IngestChunkReq
     return {text, 'source: sourceValue, timestamp, metadata};
 }
 
-isolated function createIngestMetadata(ai:Metadata? documentMetadata) returns map<json>|ai:Error {
+isolated function toJsonMetadata(ai:Metadata? documentMetadata) returns map<json>|ai:Error {
     if documentMetadata is () {
         return {};
     }
@@ -71,7 +69,7 @@ isolated function createIngestMetadata(ai:Metadata? documentMetadata) returns ma
 }
 
 isolated function getStringMetadata(map<json> metadata, string key) returns string? {
-    json? metadataValue = metadata[key];
+    json metadataValue = metadata[key];
     return metadataValue is string ? metadataValue : ();
 }
 

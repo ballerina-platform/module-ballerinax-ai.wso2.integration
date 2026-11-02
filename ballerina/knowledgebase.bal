@@ -27,7 +27,7 @@ public type KnowledgeBaseAuthConfig record {|
     decimal timeout?;
 |};
 
-# Represents a WSO2 Cloud knowledge base for retrieval.
+# Represents a WSO2 Cloud knowledge base for ingestion and retrieval.
 @display {label: "WSO2 Cloud Knowledge Base"}
 public isolated class CloudKnowledgeBase {
     *ai:KnowledgeBase;

@@ -114,3 +114,52 @@ isolated function testKnowledgeBaseRetrieveJsonRequest() returns error? {
     test:assertEquals(matches.length(), 1);
     test:assertEquals(matches[0].chunk.content, "matching content");
 }
+
+service on new http:Listener(9091) {
+    resource function post ingest/content(http:Request req) returns http:Response {
+        http:Response response = new;
+        response.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
+        response.setTextPayload("ingestion failed");
+        return response;
+    }
+}
+
+@test:Config
+isolated function testKnowledgeBaseIngestWithoutSource() returns error? {
+    // No listener runs on this port, so reaching the HTTP client would surface a connection error instead.
+    CloudKnowledgeBase knowledgeBase = check new ("http://localhost:9099",
+        {auth: {token: "test-token"}}
+    );
+    ai:Document document = {'type: "text", content: "Document without a source"};
+    ai:Error? result = knowledgeBase.ingest(document);
+    if result !is ai:Error {
+        test:assertFail("Expected an error for a document without a source");
+    }
+    test:assertTrue(result.message().includes("must contain a string 'source' or 'fileName'"));
+}
+
+@test:Config
+isolated function testKnowledgeBaseIngestNonSuccessResponse() returns error? {
+    CloudKnowledgeBase knowledgeBase = check new ("http://localhost:9091",
+        {auth: {token: "test-token"}}
+    );
+    ai:Document document = {'type: "text", content: "content", metadata: {fileName: "doc.txt"}};
+    ai:Error? result = knowledgeBase.ingest(document);
+    if result !is ai:Error {
+        test:assertFail("Expected an error for a non-2xx response");
+    }
+    test:assertTrue(result.message().includes("status code 500: ingestion failed"));
+}
+
+@test:Config
+isolated function testKnowledgeBaseIngestTransportFailure() returns error? {
+    CloudKnowledgeBase knowledgeBase = check new ("http://localhost:9099",
+        {auth: {token: "test-token"}}
+    );
+    ai:Document document = {'type: "text", content: "content", metadata: {fileName: "doc.txt"}};
+    ai:Error? result = knowledgeBase.ingest(document);
+    if result !is ai:Error {
+        test:assertFail("Expected an error when the service is unreachable");
+    }
+    test:assertTrue(result.message().startsWith("failed to ingest documents"));
+}
