@@ -18,12 +18,24 @@ import ballerina/ai;
 import ballerina/data.jsondata;
 import ballerina/http;
 
+# Configuration for authenticating with a WSO2 Cloud gateway API key.
+# The key is sent as a request header on every call to the knowledge base service.
+#
+# + apiKey - The API key issued for the knowledge base service connection
+# + headerName - The name of the HTTP header used to send the API key (default: `X-API-Key`)
+public type ApiKeyConfig record {|
+    @display {label: "API Key", kind: "password"}
+    string apiKey;
+    @display {label: "API Key Header Name"}
+    string headerName = "X-API-Key";
+|};
+
 # Configuration for connecting to a WSO2 Cloud knowledge base.
 #
-# + auth - Authentication configuration: either bearer token or OAuth2 client credentials
+# + auth - Authentication configuration: bearer token, OAuth2 client credentials, or a WSO2 Cloud gateway API key
 # + timeout - The HTTP client timeout in seconds (optional)
 public type KnowledgeBaseAuthConfig record {|
-    http:BearerTokenConfig|http:OAuth2ClientCredentialsGrantConfig auth;
+    http:BearerTokenConfig|http:OAuth2ClientCredentialsGrantConfig|ApiKeyConfig auth;
     decimal timeout?;
 |};
 
@@ -33,6 +45,7 @@ public isolated class CloudKnowledgeBase {
     *ai:KnowledgeBase;
 
     private final http:Client serviceClient;
+    private final map<string> & readonly requestHeaders;
     private final decimal minSimilarityThreshold;
     private final string? cohereRerankerApiKey;
     private final string? cohereRerankerModel;
@@ -69,9 +82,19 @@ public isolated class CloudKnowledgeBase {
             responseLimits: connectionConfig.responseLimits,
             secureSocket: connectionConfig.secureSocket,
             proxy: connectionConfig.proxy,
-            validation: connectionConfig.validation,
-            auth: knowledgeBaseAuthConfig.auth
+            validation: connectionConfig.validation
         };
+
+        http:BearerTokenConfig|http:OAuth2ClientCredentialsGrantConfig|ApiKeyConfig auth = knowledgeBaseAuthConfig.auth;
+        map<string> requestHeaders = {};
+        if auth is ApiKeyConfig {
+            if auth.headerName.trim() == "" {
+                return error("the API key header name must not be empty");
+            }
+            requestHeaders[auth.headerName] = auth.apiKey;
+        } else {
+            httpConfig.auth = auth;
+        }
 
         if knowledgeBaseAuthConfig.timeout is decimal {
             httpConfig.timeout = <decimal>knowledgeBaseAuthConfig.timeout;
@@ -83,6 +106,7 @@ public isolated class CloudKnowledgeBase {
             return error(string `failed to initialize the client: ${serviceClient.message()}`, serviceClient);
         }
         self.serviceClient = serviceClient;
+        self.requestHeaders = requestHeaders.cloneReadOnly();
         self.minSimilarityThreshold = minSimilarityThreshold;
         self.cohereRerankerApiKey = cohereRerankerApiKey;
         self.cohereRerankerModel = cohereRerankerModel;
@@ -122,7 +146,7 @@ public isolated class CloudKnowledgeBase {
         do {
             json retrievePayload = jsondata:toJson(retrieveRequest);
             http:Response response = check self.serviceClient->/retrieve.post(
-                retrievePayload, {}, APPLICATION_JSON
+                retrievePayload, self.requestHeaders, APPLICATION_JSON
             );
             json payload = check readJsonResponse(response);
             return check parseQueryMatches(payload);
