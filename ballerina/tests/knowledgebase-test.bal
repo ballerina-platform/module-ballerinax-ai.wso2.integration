@@ -115,11 +115,39 @@ isolated function testKnowledgeBaseRetrieveJsonRequest() returns error? {
     test:assertEquals(matches[0].chunk.content, "matching content");
 }
 
-service on new http:Listener(9091) {
+const INGEST_ERROR_PORT = 9092;
+
+service on new http:Listener(INGEST_ERROR_PORT) {
     resource function post ingest/content(http:Request req) returns http:Response {
         http:Response response = new;
         response.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
         response.setTextPayload("ingestion failed");
+        return response;
+    }
+}
+
+const AUTH_HEADER_PROBE_PORT = 9091;
+const DEFAULT_API_KEY_HEADER = "X-API-Key";
+const CUSTOM_API_KEY_HEADER = "X-Custom-Api-Key";
+
+// Echoes the authentication-related request headers back as chunk metadata so that tests can
+// assert exactly which headers the client sent.
+service on new http:Listener(AUTH_HEADER_PROBE_PORT) {
+    resource function post retrieve(http:Request req) returns http:Response {
+        http:Response response = new;
+        response.setJsonPayload({
+            retrieved_chunks: [
+                {
+                    content: "matching content",
+                    similarityScore: 0.9,
+                    metadata: {
+                        defaultApiKeyHeader: getHeaderValues(req, DEFAULT_API_KEY_HEADER),
+                        customApiKeyHeader: getHeaderValues(req, CUSTOM_API_KEY_HEADER),
+                        authorization: getHeaderValues(req, http:AUTH_HEADER)
+                    }
+                }
+            ]
+        });
         return response;
     }
 }
@@ -140,7 +168,7 @@ isolated function testKnowledgeBaseIngestWithoutSource() returns error? {
 
 @test:Config
 isolated function testKnowledgeBaseIngestNonSuccessResponse() returns error? {
-    CloudKnowledgeBase knowledgeBase = check new ("http://localhost:9091",
+    CloudKnowledgeBase knowledgeBase = check new (string `http://localhost:${INGEST_ERROR_PORT}`,
         {auth: {token: "test-token"}}
     );
     ai:Document document = {'type: "text", content: "content", metadata: {fileName: "doc.txt"}};
@@ -162,4 +190,51 @@ isolated function testKnowledgeBaseIngestTransportFailure() returns error? {
         test:assertFail("Expected an error when the service is unreachable");
     }
     test:assertTrue(result.message().startsWith("failed to ingest documents"));
+}
+
+isolated function getHeaderValues(http:Request req, string headerName) returns string[] {
+    string[]|http:HeaderNotFoundError values = req.getHeaders(headerName);
+    return values is string[] ? values : [];
+}
+
+isolated function retrieveAuthHeaders(KnowledgeBaseAuthConfig authConfig) returns ai:Metadata|error {
+    CloudKnowledgeBase knowledgeBase = check new (string `http://localhost:${AUTH_HEADER_PROBE_PORT}`, authConfig);
+    ai:QueryMatch[] matches = check knowledgeBase.retrieve("test query");
+    test:assertEquals(matches.length(), 1);
+    return matches[0].chunk.metadata ?: {};
+}
+
+@test:Config
+isolated function testKnowledgeBaseRetrieveWithApiKeyUsesDefaultHeader() returns error? {
+    ai:Metadata headers = check retrieveAuthHeaders({auth: {apiKey: "test-api-key"}});
+    test:assertEquals(headers["defaultApiKeyHeader"], ["test-api-key"]);
+    test:assertEquals(headers["customApiKeyHeader"], []);
+    test:assertEquals(headers["authorization"], []);
+}
+
+@test:Config
+isolated function testKnowledgeBaseRetrieveWithApiKeyUsesCustomHeader() returns error? {
+    KnowledgeBaseAuthConfig authConfig = {auth: {apiKey: "test-api-key", headerName: CUSTOM_API_KEY_HEADER}};
+    ai:Metadata headers = check retrieveAuthHeaders(authConfig);
+    test:assertEquals(headers["customApiKeyHeader"], ["test-api-key"]);
+    test:assertEquals(headers["defaultApiKeyHeader"], []);
+    test:assertEquals(headers["authorization"], []);
+}
+
+@test:Config
+isolated function testKnowledgeBaseRetrieveWithBearerTokenSendsAuthorizationHeader() returns error? {
+    ai:Metadata headers = check retrieveAuthHeaders({auth: {token: "test-token"}});
+    test:assertEquals(headers["authorization"], ["Bearer test-token"]);
+    test:assertEquals(headers["defaultApiKeyHeader"], []);
+}
+
+@test:Config
+isolated function testKnowledgeBaseInitWithEmptyApiKeyHeaderNameFails() {
+    CloudKnowledgeBase|ai:Error knowledgeBase = new (string `http://localhost:${AUTH_HEADER_PROBE_PORT}`,
+        {auth: {apiKey: "test-api-key", headerName: " "}}
+    );
+    if knowledgeBase !is ai:Error {
+        test:assertFail("Expected an error for an empty API key header name");
+    }
+    test:assertEquals(knowledgeBase.message(), "the API key header name must not be empty");
 }
