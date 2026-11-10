@@ -39,12 +39,13 @@ public type KnowledgeBaseAuthConfig record {|
     decimal timeout?;
 |};
 
-# Represents a WSO2 Cloud knowledge base for retrieval.
+# Represents a WSO2 Cloud knowledge base for ingestion and retrieval.
 @display {label: "WSO2 Cloud Knowledge Base"}
 public isolated class CloudKnowledgeBase {
     *ai:KnowledgeBase;
 
     private final http:Client serviceClient;
+    private final http:Client ingestServiceClient;
     private final map<string> & readonly requestHeaders;
     private final decimal minSimilarityThreshold;
     private final string? cohereRerankerApiKey;
@@ -106,6 +107,16 @@ public isolated class CloudKnowledgeBase {
             return error(string `failed to initialize the client: ${serviceClient.message()}`, serviceClient);
         }
         self.serviceClient = serviceClient;
+
+        // Ingestion is not safely retryable because a retry may duplicate vectors.
+        http:ClientConfiguration ingestHttpConfig = {...httpConfig};
+        ingestHttpConfig.retryConfig = ();
+        http:Client|error ingestServiceClient = new (normalizedUrl, ingestHttpConfig);
+        if ingestServiceClient is error {
+            return error(string `failed to initialize the ingestion client: ${ingestServiceClient.message()}`,
+                ingestServiceClient);
+        }
+        self.ingestServiceClient = ingestServiceClient;
         self.requestHeaders = requestHeaders.cloneReadOnly();
         self.minSimilarityThreshold = minSimilarityThreshold;
         self.cohereRerankerApiKey = cohereRerankerApiKey;
@@ -113,12 +124,20 @@ public isolated class CloudKnowledgeBase {
         self.rerankerTopN = rerankerTopN;
     }
 
-    # Ingestion is not supported.
+    # Ingests documents or chunks into the WSO2 Cloud knowledge base.
     #
     # + documents - The documents or chunks to ingest
-    # + return - An `ai:Error` since ingestion is not supported by the retrieve API
+    # + return - `nil` on success, or an `ai:Error` if ingestion fails
     public isolated function ingest(ai:Chunk[]|ai:Document[]|ai:Document documents) returns ai:Error? {
-        return error("ingestion is not supported by the WSO2 Integration knowledge base API");
+        do {
+            KnowledgeBaseIngestRequest ingestRequest = check createIngestRequest(documents);
+            http:Response response = check self.ingestServiceClient->/ingest/content.post(
+                ingestRequest, self.requestHeaders, APPLICATION_JSON
+            );
+            check validateResponse(response);
+        } on fail error e {
+            return error(string `failed to ingest documents: ${e.message()}`, e);
+        }
     }
 
     # Retrieves relevant chunks for the given query.

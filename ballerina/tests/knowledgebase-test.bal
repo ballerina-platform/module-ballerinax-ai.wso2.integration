@@ -17,8 +17,38 @@
 import ballerina/ai;
 import ballerina/http;
 import ballerina/test;
+import ballerina/time;
 
 service on new http:Listener(9090) {
+    resource function post ingest/content(http:Request req) returns http:Response|error {
+        if !req.getContentType().startsWith(APPLICATION_JSON) {
+            return error("Expected an application/json request");
+        }
+        json payload = check req.getJsonPayload();
+        if payload !is map<json> {
+            return error("Expected an object payload");
+        }
+        json? documents = payload["documents"];
+        if documents !is json[] || documents.length() != 2 {
+            return error("Unexpected ingest request payload");
+        }
+        json firstDocument = documents[0];
+        if firstDocument !is map<json> || firstDocument["text"] !=
+                "Permanent employees receive 21 days of annual leave per calendar year."
+                || firstDocument["source"] != "employee-handbook.pdf"
+                || firstDocument["timestamp"] != "2026-07-31T10:00:00Z" {
+            return error("Unexpected normalized ingest chunk");
+        }
+        json? metadata = firstDocument["metadata"];
+        if metadata !is map<json> || metadata["createdAt"] != "2026-07-01T08:30:00Z"
+                || metadata["modifiedAt"] != "2026-07-30T14:15:00Z" {
+            return error("Unexpected normalized ingest metadata");
+        }
+        http:Response response = new;
+        response.statusCode = http:STATUS_NO_CONTENT;
+        return response;
+    }
+
     resource function post retrieve(http:Request req) returns http:Response|error {
         if !req.getContentType().startsWith(APPLICATION_JSON) {
             return error("Expected an application/json request");
@@ -42,6 +72,40 @@ service on new http:Listener(9090) {
 }
 
 @test:Config
+isolated function testKnowledgeBaseIngestJsonRequest() returns error? {
+    CloudKnowledgeBase knowledgeBase = check new ("http://localhost:9090",
+        {auth: {token: "test-token"}}
+    );
+    time:Utc createdAt = check time:utcFromString("2026-07-01T08:30:00Z");
+    time:Utc modifiedAt = check time:utcFromString("2026-07-30T14:15:00Z");
+    ai:Chunk[] chunks = [
+        {
+            'type: "text-chunk",
+            content: "Permanent employees receive 21 days of annual leave per calendar year.",
+            metadata: {
+                fileName: "employee-handbook.pdf",
+                createdAt,
+                modifiedAt,
+                index: 0,
+                "source": "employee-handbook.pdf",
+                "timestamp": "2026-07-31T10:00:00Z"
+            }
+        },
+        {
+            'type: "text-chunk",
+            content: "Leave requests must be submitted through the HR portal.",
+            metadata: {
+                fileName: "employee-handbook.pdf",
+                index: 1,
+                "source": "employee-handbook.pdf",
+                "timestamp": "2026-07-31T10:00:00Z"
+            }
+        }
+    ];
+    check knowledgeBase.ingest(chunks);
+}
+
+@test:Config
 isolated function testKnowledgeBaseRetrieveJsonRequest() returns error? {
     CloudKnowledgeBase knowledgeBase = check new ("http://localhost:9090",
         {auth: {token: "test-token"}}
@@ -49,6 +113,17 @@ isolated function testKnowledgeBaseRetrieveJsonRequest() returns error? {
     ai:QueryMatch[] matches = check knowledgeBase.retrieve("test query");
     test:assertEquals(matches.length(), 1);
     test:assertEquals(matches[0].chunk.content, "matching content");
+}
+
+const INGEST_ERROR_PORT = 9092;
+
+service on new http:Listener(INGEST_ERROR_PORT) {
+    resource function post ingest/content(http:Request req) returns http:Response {
+        http:Response response = new;
+        response.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
+        response.setTextPayload("ingestion failed");
+        return response;
+    }
 }
 
 const AUTH_HEADER_PROBE_PORT = 9091;
@@ -75,6 +150,46 @@ service on new http:Listener(AUTH_HEADER_PROBE_PORT) {
         });
         return response;
     }
+}
+
+@test:Config
+isolated function testKnowledgeBaseIngestWithoutSource() returns error? {
+    // No listener runs on this port, so reaching the HTTP client would surface a connection error instead.
+    CloudKnowledgeBase knowledgeBase = check new ("http://localhost:9099",
+        {auth: {token: "test-token"}}
+    );
+    ai:Document document = {'type: "text", content: "Document without a source"};
+    ai:Error? result = knowledgeBase.ingest(document);
+    if result !is ai:Error {
+        test:assertFail("Expected an error for a document without a source");
+    }
+    test:assertTrue(result.message().includes("must contain a string 'source' or 'fileName'"));
+}
+
+@test:Config
+isolated function testKnowledgeBaseIngestNonSuccessResponse() returns error? {
+    CloudKnowledgeBase knowledgeBase = check new (string `http://localhost:${INGEST_ERROR_PORT}`,
+        {auth: {token: "test-token"}}
+    );
+    ai:Document document = {'type: "text", content: "content", metadata: {fileName: "doc.txt"}};
+    ai:Error? result = knowledgeBase.ingest(document);
+    if result !is ai:Error {
+        test:assertFail("Expected an error for a non-2xx response");
+    }
+    test:assertTrue(result.message().includes("status code 500: ingestion failed"));
+}
+
+@test:Config
+isolated function testKnowledgeBaseIngestTransportFailure() returns error? {
+    CloudKnowledgeBase knowledgeBase = check new ("http://localhost:9099",
+        {auth: {token: "test-token"}}
+    );
+    ai:Document document = {'type: "text", content: "content", metadata: {fileName: "doc.txt"}};
+    ai:Error? result = knowledgeBase.ingest(document);
+    if result !is ai:Error {
+        test:assertFail("Expected an error when the service is unreachable");
+    }
+    test:assertTrue(result.message().startsWith("failed to ingest documents"));
 }
 
 isolated function getHeaderValues(http:Request req, string headerName) returns string[] {

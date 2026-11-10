@@ -31,6 +31,17 @@ const TEXT = "text";
 const SOURCE = "source";
 const TIMESTAMP = "timestamp";
 
+type KnowledgeBaseIngestRequest record {|
+    IngestChunkRequest[] documents;
+|};
+
+type IngestChunkRequest record {|
+    string text;
+    string 'source;
+    string timestamp?;
+    map<json> metadata;
+|};
+
 type KnowledgeBaseRetrieveRequest record {|
     @jsondata:Name {value: "user_query"}
     string userQuery;
