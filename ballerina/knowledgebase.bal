@@ -45,6 +45,7 @@ public isolated class CloudKnowledgeBase {
     *ai:KnowledgeBase;
 
     private final http:Client serviceClient;
+    private final http:Client ingestServiceClient;
     private final map<string> & readonly requestHeaders;
     private final decimal minSimilarityThreshold;
     private final string? cohereRerankerApiKey;
@@ -106,6 +107,16 @@ public isolated class CloudKnowledgeBase {
             return error(string `failed to initialize the client: ${serviceClient.message()}`, serviceClient);
         }
         self.serviceClient = serviceClient;
+
+        // Ingestion is not safely retryable because a retry may duplicate vectors.
+        http:ClientConfiguration ingestHttpConfig = {...httpConfig};
+        ingestHttpConfig.retryConfig = ();
+        http:Client|error ingestServiceClient = new (normalizedUrl, ingestHttpConfig);
+        if ingestServiceClient is error {
+            return error(string `failed to initialize the ingestion client: ${ingestServiceClient.message()}`,
+                ingestServiceClient);
+        }
+        self.ingestServiceClient = ingestServiceClient;
         self.requestHeaders = requestHeaders.cloneReadOnly();
         self.minSimilarityThreshold = minSimilarityThreshold;
         self.cohereRerankerApiKey = cohereRerankerApiKey;
@@ -120,8 +131,8 @@ public isolated class CloudKnowledgeBase {
     public isolated function ingest(ai:Chunk[]|ai:Document[]|ai:Document documents) returns ai:Error? {
         do {
             KnowledgeBaseIngestRequest ingestRequest = check createIngestRequest(documents);
-            http:Response response = check self.serviceClient->/ingest/content.post(
-                ingestRequest, {}, APPLICATION_JSON
+            http:Response response = check self.ingestServiceClient->/ingest/content.post(
+                ingestRequest, self.requestHeaders, APPLICATION_JSON
             );
             check validateResponse(response);
         } on fail error e {
