@@ -4,7 +4,7 @@
 
 ## Overview
 
-The `ai.wso2.integration` module integrates the Ballerina AI APIs with a WSO2 Integration knowledge base. It implements `ai:KnowledgeBase` and supports retrieving relevant content through the service's `/retrieve` endpoint.
+The `ai.wso2.integration` module integrates the Ballerina AI APIs with a WSO2 Integration knowledge base. It implements `ai:KnowledgeBase` and supports ingesting content through the service's `/ingest/content` endpoint and retrieving relevant content through its `/retrieve` endpoint.
 
 ## Quickstart
 
@@ -17,6 +17,7 @@ integration:CloudKnowledgeBase knowledgeBase = check new (
     {auth: {token: accessToken}}
 );
 
+check knowledgeBase.ingest(documents);
 ai:QueryMatch[] matches = check knowledgeBase.retrieve("How do I configure the integration?");
 ```
 
@@ -41,7 +42,7 @@ integration:CloudKnowledgeBase knowledgeBase = check new (
 // {auth: {apiKey, headerName: "X-Custom-Api-Key"}}
 ```
 
-Ingestion and deletion are not currently supported by this knowledge base implementation.
+Each ingested document must have a `source` or `fileName` metadata value. Deletion is not currently supported by this knowledge base implementation.
 
 ## Build from source
 
