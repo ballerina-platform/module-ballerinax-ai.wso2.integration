@@ -18,7 +18,7 @@ import ballerina/ai;
 import ballerina/data.jsondata;
 import ballerina/http;
 
-# Configuration for authenticating with a WSO2 Cloud gateway API key.
+# Configuration for authenticating with a Choreo Cloud gateway API key.
 # The key is sent as a request header on every call to the knowledge base service.
 #
 # + apiKey - The API key issued for the knowledge base service connection
@@ -30,17 +30,17 @@ public type ApiKeyConfig record {|
     string headerName = "X-API-Key";
 |};
 
-# Configuration for connecting to a WSO2 Cloud knowledge base.
+# Configuration for connecting to a Choreo Cloud knowledge base.
 #
-# + auth - Authentication configuration: bearer token, OAuth2 client credentials, or a WSO2 Cloud gateway API key
+# + auth - Authentication configuration: bearer token, OAuth2 client credentials, or a Choreo Cloud gateway API key
 # + timeout - The HTTP client timeout in seconds (optional)
 public type KnowledgeBaseAuthConfig record {|
     http:BearerTokenConfig|http:OAuth2ClientCredentialsGrantConfig|ApiKeyConfig auth;
     decimal timeout?;
 |};
 
-# Represents a WSO2 Cloud knowledge base for retrieval.
-@display {label: "WSO2 Cloud Knowledge Base"}
+# Represents a Choreo Cloud knowledge base for retrieval.
+@display {label: "Choreo Cloud Knowledge Base"}
 public isolated class CloudKnowledgeBase {
     *ai:KnowledgeBase;
 
@@ -118,7 +118,7 @@ public isolated class CloudKnowledgeBase {
     # + documents - The documents or chunks to ingest
     # + return - An `ai:Error` since ingestion is not supported by the retrieve API
     public isolated function ingest(ai:Chunk[]|ai:Document[]|ai:Document documents) returns ai:Error? {
-        return error("ingestion is not supported by the WSO2 Integration knowledge base API");
+        return error("ingestion is not supported by the Choreo Cloud knowledge base API");
     }
 
     # Retrieves relevant chunks for the given query.
@@ -160,6 +160,6 @@ public isolated class CloudKnowledgeBase {
     # + filters - The metadata filters used to identify which chunks to delete
     # + return - An `ai:Error` since deletion is not supported by the retrieve API
     public isolated function deleteByFilter(ai:MetadataFilters filters) returns ai:Error? {
-        return error("delete by filter is not supported by the WSO2 Integration knowledge base API");
+        return error("delete by filter is not supported by the Choreo Cloud Integration knowledge base API");
     }
 }
