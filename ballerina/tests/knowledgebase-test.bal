@@ -25,7 +25,9 @@ service on new http:Listener(9090) {
         }
         json payload = check req.getJsonPayload();
         if payload !is map<json> || payload["user_query"] != "test query"
-                || payload["reranker_top_n"] != 5 {
+                || payload["reranker_top_n"] != 5
+                // Guards the documented default threshold; JSON decimals parse as `decimal`, hence `0.0d`.
+                || payload["min_similarity_threshold"] != 0.0d {
             return error("Unexpected retrieve request payload");
         }
         http:Response response = new;
