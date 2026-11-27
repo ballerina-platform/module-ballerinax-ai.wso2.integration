@@ -63,7 +63,7 @@ public isolated class CloudKnowledgeBase {
     public isolated function init(
             @display {label: "Service URL"} string serviceUrl,
             @display {label: "Knowledge Base Authentication Configuration"} KnowledgeBaseAuthConfig knowledgeBaseAuthConfig,
-            @display {label: "Minimum Similarity Threshold"} decimal minSimilarityThreshold = 0.7,
+            @display {label: "Minimum Similarity Threshold"} decimal minSimilarityThreshold = 0.0,
             @display {label: "Cohere Reranker API Key"} string? cohereRerankerApiKey = (),
             @display {label: "Cohere Reranker Model"} string? cohereRerankerModel = (),
             @display {label: "Reranker Top N"} int rerankerTopN = 5,
