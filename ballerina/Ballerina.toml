@@ -1,13 +1,13 @@
 [package]
 authors = ["Ballerina"]
 distribution = "2201.13.6"
-keywords = ["Vendor/WSO2", "Area/AI & Machine Learning", "Type/Connector", "Type/Knowledge Base", "Name/WSO2 Integration Platform"]
+keywords = ["Vendor/Choreo Labs", "Area/AI & Machine Learning", "Type/Connector", "Type/Knowledge Base", "Name/Choreo Integration Platform"]
 license = ["Apache-2.0"]
 name = "ai.wso2.integration"
 org = "ballerinax"
 icon = "icon.png"
 repository = "https://github.com/ballerina-platform/module-ballerinax-ai.wso2.integration"
-version = "1.2.0"
+version = "1.2.1"
 include = ["metadata/**"]
 
 [platform.java21]
