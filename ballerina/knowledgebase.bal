@@ -55,9 +55,7 @@ public isolated class CloudKnowledgeBase {
     #
     # + knowledgeBaseAuthConfig - Authentication configuration for connecting to the knowledge base
     # + connectionConfig - Additional HTTP connection configurations
-    # + minSimilarityThreshold - The minimum similarity score for retrieved chunks (default: 0.0, which applies no
-    # threshold). Suitable values depend on the embedding model; for example, around 0.3-0.4 for OpenAI
-    # text-embedding-3-small
+    # + minSimilarityThreshold - The minimum similarity score threshold for retrieved chunks (default: 0.0)
     # + cohereRerankerApiKey - The API key for the Cohere reranker service; omit to disable reranking
     # + cohereRerankerModel - The Cohere reranker model name to use
     # + rerankerTopN - The number of top results to return from the reranker (default: 5)
